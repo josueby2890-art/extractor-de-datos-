@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Extractor de Comprobantes · Inversiones Bolívar</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<style>
+  :root {
+    --bg: #FBFAF7;
+    --surface: #FFFFFF;
+    --surface-2: #F5F2EC;
+    --border: #EAE7E0;
+    --border-strong: #D8D4C8;
+    --text: #1A1A1A;
+    --text-muted: #5C5C5C;
+    --text-soft: #9A968D;
+    --accent: #D14C2E;       /* terracota Bolívar */
+    --accent-soft: #FBEDE7;
+    --accent-deep: #A83A20;
+    --bcorp: #00A651;
+    --bcorp-soft: #E5F5EC;
+    --cargo: #B85C38;
+    --cargo-soft: #F8ECE5;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { background: var(--bg); }
+  body {
+    font-family: 'Manrope', sans-serif;
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    font-weight: 400;
+  }
+
+  /* ---------- Top nav ---------- */
+  .topnav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topnav-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 22px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .logo {
+    font-family: 'Instrument Serif', serif;
+    font-size: 28px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    text-decoration: none;
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+  }
+  .logo-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 4px;
+  }
+  .nav-meta {
+    font-size: 12px;
+    color: var(--text-soft);
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .nav-meta .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--bcorp);
+    display: inline-block;
+  }
+
+  /* ---------- Container ---------- */
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 80px 40px 64px;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    margin-bottom: 64px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 40px;
+    align-items: end;
+  }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 24px;
+  }
+  h1 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: clamp(48px, 7vw, 84px);
+    letter-spacing: -0.02em;
+    line-height: 0.98;
+    color: var(--text);
+  }
+  h1 .paren {
+    color: var(--accent);
+    font-style: italic;
+  }
+  .lede {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 19px;
+    color: var(--text-muted);
+    max-width: 360px;
+    line-height: 1.45;
+    text-align: right;
+  }
+
+  /* ---------- Drop zone ---------- */
+  .dropzone {
+    background: var(--surface);
+    border: 1px dashed var(--border-strong);
+    padding: 96px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+  }
+  .dropzone:hover, .dropzone.dragging {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .dropzone-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--surface-2);
+    transition: all 0.2s;
+  }
+  .dropzone:hover .dropzone-icon {
+    background: var(--surface);
+  }
+  .dropzone-icon svg { width: 24px; height: 24px; stroke: var(--accent); }
+  .dropzone-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 32px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    margin-bottom: 10px;
+  }
+  .dropzone-title .paren {
+    color: var(--accent);
+    font-style: italic;
+  }
+  .dropzone-hint {
+    font-size: 14px;
+    color: var(--text-muted);
+    font-weight: 300;
+  }
+  .dropzone-hint kbd {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--surface-2);
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: var(--text);
+  }
+  #fileInput { display: none; }
+
+  /* ---------- Loading ---------- */
+  .loading {
+    display: none;
+    text-align: center;
+    padding: 100px 32px;
+  }
+  .loading.active { display: block; }
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    margin: 0 auto 24px;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 22px;
+    color: var(--text-muted);
+  }
+
+  /* ---------- Summary ---------- */
+  .summary { display: none; }
+  .summary.active { display: block; }
+
+  .summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    margin-bottom: 36px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 44px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+  .summary-title .paren { color: var(--accent); font-style: italic; }
+  .summary-actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  .btn {
+    font-family: 'Manrope', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 13px 22px;
+    border-radius: 0;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    letter-spacing: 0.01em;
+  }
+  .btn:hover {
+    border-color: var(--text);
+  }
+  .btn-primary {
+    background: var(--text);
+    color: var(--surface);
+    border-color: var(--text);
+  }
+  .btn-primary:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .btn svg { width: 14px; height: 14px; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin-bottom: 48px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .stat {
+    padding: 32px 28px;
+    border-right: 1px solid var(--border);
+  }
+  .stat:last-child { border-right: none; }
+  .stat-label {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+  .stat-value {
+    font-family: 'Instrument Serif', serif;
+    font-size: 38px;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    line-height: 1.05;
+  }
+  .stat-value.mono { font-family: 'JetBrains Mono', monospace; font-size: 26px; }
+  .stat-value.money { font-feature-settings: 'tnum'; }
+  .stat-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    font-weight: 300;
+  }
+  .stat-sub em { color: var(--accent); font-style: normal; font-weight: 500; }
+
+  /* ---------- Filters ---------- */
+  .filters {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 28px;
+    align-items: center;
+  }
+  .search-wrap {
+    flex: 1;
+    position: relative;
+  }
+  .search {
+    width: 100%;
+    padding: 14px 18px 14px 46px;
+    border: 1px solid var(--border-strong);
+    border-radius: 0;
+    font-family: 'Manrope', sans-serif;
+    font-size: 14px;
+    background: var(--surface);
+    transition: border-color 0.15s;
+    color: var(--text);
+  }
+  .search:focus {
+    outline: none;
+    border-color: var(--text);
+  }
+  .search::placeholder { color: var(--text-soft); }
+  .search-wrap svg {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    stroke: var(--text-soft);
+  }
+  .chips {
+    display: flex;
+    gap: 8px;
+  }
+  .chip {
+    padding: 11px 18px;
+    border: 1px solid var(--border-strong);
+    border-radius: 0;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    background: var(--surface);
+    color: var(--text-muted);
+    transition: all 0.15s;
+    font-family: 'Manrope', sans-serif;
+    letter-spacing: 0.01em;
+  }
+  .chip:hover { border-color: var(--text); color: var(--text); }
+  .chip.active {
+    background: var(--text);
+    color: var(--surface);
+    border-color: var(--text);
+  }
+
+  /* ---------- Table ---------- */
+  .results-meta {
+    font-size: 12px;
+    color: var(--text-soft);
+    margin-bottom: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  thead {
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    text-align: left;
+    padding: 18px 24px;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+    font-weight: 600;
+  }
+  th.right { text-align: right; }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.12s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+  td {
+    padding: 22px 24px;
+    font-size: 14px;
+    vertical-align: middle;
+  }
+  td.right { text-align: right; }
+  .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text-soft);
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 12px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .pill::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+  .pill.cargo {
+    background: var(--cargo-soft);
+    color: var(--cargo);
+  }
+  .pill.cargo::before { background: var(--cargo); }
+  .pill.abono {
+    background: var(--bcorp-soft);
+    color: var(--bcorp);
+  }
+  .pill.abono::before { background: var(--bcorp); }
+
+  .titular {
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.3;
+    font-size: 14.5px;
+  }
+  .desc {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    margin-top: 3px;
+    font-weight: 300;
+  }
+  .amount {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 14px;
+    font-feature-settings: 'tnum';
+    color: var(--text);
+  }
+  .download {
+    background: none;
+    border: 1px solid var(--border-strong);
+    width: 36px;
+    height: 36px;
+    border-radius: 0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .download:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .download:hover svg { stroke: white; }
+  .download svg {
+    width: 14px;
+    height: 14px;
+    stroke: var(--text-muted);
+    transition: stroke 0.15s;
+  }
+
+  .empty {
+    padding: 80px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 18px;
+  }
+
+  /* ---------- Error ---------- */
+  .error {
+    display: none;
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    padding: 24px 28px;
+    margin-top: 24px;
+    color: var(--accent-deep);
+  }
+  .error.active { display: block; }
+  .error strong {
+    display: block;
+    font-family: 'Instrument Serif', serif;
+    font-size: 20px;
+    font-weight: 400;
+    margin-bottom: 6px;
+  }
+  .error span { font-size: 14px; line-height: 1.5; }
+
+  /* ---------- Footer ---------- */
+  footer {
+    background: var(--text);
+    color: var(--surface);
+    margin-top: 100px;
+    padding: 64px 40px 32px;
+  }
+  .footer-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  .footer-quote {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+    max-width: 820px;
+    margin-bottom: 60px;
+  }
+  .footer-quote .paren { color: var(--accent); font-style: italic; }
+  .footer-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    padding-top: 36px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    font-size: 12px;
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 0.04em;
+  }
+  .footer-meta div:last-child { text-align: right; }
+  .footer-meta strong { color: var(--surface); font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; font-size: 11px; }
+
+  @media (max-width: 900px) {
+    .topnav-inner, .container { padding-left: 24px; padding-right: 24px; }
+    .container { padding-top: 48px; }
+    .hero { grid-template-columns: 1fr; gap: 24px; }
+    .lede { text-align: left; max-width: 100%; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .stat:nth-child(2) { border-right: none; }
+    .stat:nth-child(1), .stat:nth-child(2) { border-bottom: 1px solid var(--border); }
+    .filters { flex-direction: column; align-items: stretch; }
+    .chips { flex-wrap: wrap; }
+    th, td { padding: 14px 16px; }
+    th:nth-child(4), td:nth-child(4) { display: none; }
+    .summary-header { flex-direction: column; align-items: flex-start; gap: 20px; }
+    footer { padding: 48px 24px 24px; margin-top: 60px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a class="logo" href="#">Bolívar<span class="logo-dot"></span></a>
+    <div class="nav-meta">
+      <span><span class="dot"></span> Tesorería · Herramienta interna</span>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="hero">
+    <div>
+      <div class="eyebrow">co(human)idad · Tecnología</div>
+      <h1>Extractor de <span class="paren">(comprobantes)</span></h1>
+    </div>
+    <div class="lede">
+      Carga un lote de Pago de Proveedores de E‑Banca y descarga individualmente cualquier nota de cargo o abono.
+    </div>
+  </div>
+
+  <div id="dropzone" class="dropzone">
+    <div class="dropzone-icon">
+      <svg fill="none" stroke-width="1.5" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+      </svg>
+    </div>
+    <div class="dropzone-title">Arrastra <span class="paren">el PDF</span> aquí</div>
+    <div class="dropzone-hint">o haz clic para seleccionar — <kbd>BOLIVAR_S20.pdf</kbd> u otro lote de E‑Banca</div>
+    <input type="file" id="fileInput" accept="application/pdf" />
+  </div>
+
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Procesando comprobantes…</div>
+  </div>
+
+  <div id="error" class="error">
+    <strong>No se pudieron identificar comprobantes</strong>
+    <span id="errorMsg">Verifica que el PDF sea un lote válido de Pago de Proveedores de E‑Banca.</span>
+  </div>
+
+  <div id="summary" class="summary">
+
+    <div class="summary-header">
+      <div class="summary-title">Lote <span class="paren">procesado</span></div>
+      <div class="summary-actions">
+        <button class="btn" id="btnReset">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 109-9M3 12l4-4M3 12l4 4"/></svg>
+          Cargar otro
+        </button>
+        <button class="btn btn-primary" id="btnDownloadAll">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          Descargar todo (ZIP)
+        </button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">ID del lote</div>
+        <div class="stat-value mono" id="statLoteId">—</div>
+        <div class="stat-sub" id="statFecha">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Comprobantes</div>
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-sub" id="statTipos">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Total cargado</div>
+        <div class="stat-value money" id="statMontoCargo">$0.00</div>
+        <div class="stat-sub">Débitos a Bolívar</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Total abonado</div>
+        <div class="stat-value money" id="statMontoAbono">$0.00</div>
+        <div class="stat-sub">Créditos a beneficiarios</div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <div class="search-wrap">
+        <svg fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" class="search" id="search" placeholder="Buscar por beneficiario, descripción, monto, referencia…" />
+      </div>
+      <div class="chips">
+        <button class="chip active" data-filter="all">Todos</button>
+        <button class="chip" data-filter="abono">Abonos</button>
+        <button class="chip" data-filter="cargo">Cargos</button>
+      </div>
+    </div>
+
+    <div class="results-meta" id="resultsMeta">0 comprobantes</div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 60px;">#</th>
+            <th style="width: 120px;">Tipo</th>
+            <th>Beneficiario / Descripción</th>
+            <th style="width: 160px;">Referencia</th>
+            <th class="right" style="width: 140px;">Monto</th>
+            <th style="width: 60px;"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-quote">
+      No buscamos ser la mejor empresa del mundo, sino la mejor empresa <span class="paren">para el mundo</span>.
+    </div>
+    <div class="footer-meta">
+      <div>
+        <strong>Inversiones Bolívar · Tesorería</strong><br>
+        <span style="margin-top:8px; display:inline-block;">El PDF nunca abandona tu navegador. Procesamiento local con PDF.js + pdf‑lib.</span>
+      </div>
+      <div>
+        <strong>v1.0 · Empresa B</strong><br>
+        <span style="margin-top:8px; display:inline-block;">© 2026 · Herramienta interna</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const loadingEl = document.getElementById('loading');
+const summaryEl = document.getElementById('summary');
+const errorEl = document.getElementById('error');
+const errorMsgEl = document.getElementById('errorMsg');
+const tbody = document.getElementById('tbody');
+const searchEl = document.getElementById('search');
+const resultsMetaEl = document.getElementById('resultsMeta');
+const btnReset = document.getElementById('btnReset');
+const btnDownloadAll = document.getElementById('btnDownloadAll');
+
+let originalPdfBytes = null;
+let comprobantes = [];
+let activeFilter = 'all';
+
+dropzone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+['dragenter', 'dragover'].forEach(evt => {
+  dropzone.addEventListener(evt, e => {
+    e.preventDefault();
+    dropzone.classList.add('dragging');
+  });
+});
+['dragleave', 'drop'].forEach(evt => {
+  dropzone.addEventListener(evt, e => {
+    e.preventDefault();
+    dropzone.classList.remove('dragging');
+  });
+});
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f && f.type === 'application/pdf') handleFile(f);
+});
+
+btnReset.addEventListener('click', () => {
+  summaryEl.classList.remove('active');
+  errorEl.classList.remove('active');
+  dropzone.style.display = 'block';
+  fileInput.value = '';
+  originalPdfBytes = null;
+  comprobantes = [];
+});
+
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeFilter = chip.dataset.filter;
+    renderTable();
+  });
+});
+
+searchEl.addEventListener('input', renderTable);
+
+async function handleFile(file) {
+  errorEl.classList.remove('active');
+  summaryEl.classList.remove('active');
+  dropzone.style.display = 'none';
+  loadingEl.classList.add('active');
+
+  try {
+    originalPdfBytes = await file.arrayBuffer();
+    comprobantes = await parsePdf(originalPdfBytes);
+
+    if (comprobantes.length === 0) {
+      const sample = comprobantes.debugSample || '(sin texto)';
+      console.warn('Texto extraído de la primera página:', sample);
+      throw new Error('No se encontraron bloques "NOTA DE CARGO" o "NOTA DE ABONO" en el PDF. Abre la consola del navegador (F12) para ver el texto extraído.');
+    }
+
+    loadingEl.classList.remove('active');
+    renderSummary();
+    summaryEl.classList.add('active');
+  } catch (err) {
+    loadingEl.classList.remove('active');
+    dropzone.style.display = 'block';
+    errorMsgEl.textContent = err.message || 'Error desconocido al procesar el PDF.';
+    errorEl.classList.add('active');
+    console.error(err);
+  }
+}
+
+async function parsePdf(arrayBuffer) {
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+  const all = [];
+  let debugSample = '';
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const tc = await page.getTextContent();
+    const items = tc.items.slice();
+
+    const lines = [];
+    let currentLine = null;
+    items.forEach(it => {
+      const y = Math.round(it.transform[5]);
+      if (!currentLine || Math.abs(currentLine.y - y) > 3) {
+        currentLine = { y, text: it.str };
+        lines.push(currentLine);
+      } else {
+        currentLine.text += ' ' + it.str;
+      }
+    });
+
+    let pageText = lines.map(l => l.text).join('\n');
+
+    pageText = pageText
+      .replace(/COMPRO[-‐]\s*\n\s*(\d+)\s*\n\s*BANTE\s*:?/gi, 'COMPROBANTE: $1')
+      .replace(/COMPRO[-‐]\s*BANTE/gi, 'COMPROBANTE')
+      .replace(/([a-záéíóúñ])-\s*\n\s*([a-záéíóúñ])/gi, '$1$2');
+
+    if (i === 1) debugSample = pageText.substring(0, 800);
+
+    const blockRegex = /(NOTA DE (?:CARGO|ABONO))([\s\S]*?)(?=NOTA DE (?:CARGO|ABONO)|$)/g;
+    let m;
+    let idxOnPage = 0;
+    while ((m = blockRegex.exec(pageText)) !== null) {
+      const tipo = m[1].toUpperCase();
+      const body = m[2];
+
+      const comp = parseBlock(body);
+      if (!comp) continue;
+      comp.tipo = tipo;
+      comp.pageIndex = i - 1;
+      comp.positionOnPage = idxOnPage;
+      all.push(comp);
+      idxOnPage++;
+    }
+  }
+
+  const allText = await getAllText(pdf);
+  const loteMatch = allText.match(/PAGO DE PROVEEDORES ID\s+([A-Z0-9]+)/i);
+  all.loteId = loteMatch ? loteMatch[1] : null;
+  all.debugSample = debugSample;
+
+  return all;
+}
+
+async function getAllText(pdf) {
+  let t = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const tc = await page.getTextContent();
+    t += tc.items.map(it => it.str).join(' ') + ' ';
+  }
+  return t;
+}
+
+function parseBlock(body) {
+  body = body.replace(/\s+/g, ' ');
+
+  const get = (label) => {
+    const re = new RegExp(
+      label + '\\s*:?\\s*(.*?)\\s*(?=(?:N[ÚU]MERO DE COMPROBANTE|REFERENCIA|CUENTA|TIPO DE CUENTA|TITULAR DE LA CUENTA|MONTO|DESCRIPCI[ÓO]N|FECHA DE CREACI[ÓO]N|FECHA DE SISTEMA|NOTA DE)\\s*:?|$)',
+      'i'
+    );
+    const m = body.match(re);
+    return m ? m[1].trim() : '';
+  };
+
+  const numero = get('N[ÚU]MERO DE COMPROBANTE');
+  if (!numero || isNaN(parseInt(numero, 10))) return null;
+
+  return {
+    numero: parseInt(numero, 10),
+    referencia: get('REFERENCIA'),
+    cuenta: get('CUENTA'),
+    tipoCuenta: get('TIPO DE CUENTA'),
+    titular: get('TITULAR DE LA CUENTA'),
+    monto: parseFloat(get('MONTO').replace(/[$,\s]/g, '')) || 0,
+    descripcion: get('DESCRIPCI[ÓO]N'),
+    fechaCreacion: get('FECHA DE CREACI[ÓO]N'),
+    fechaSistema: get('FECHA DE SISTEMA'),
+  };
+}
+
+function renderSummary() {
+  document.getElementById('statLoteId').textContent = comprobantes.loteId || '—';
+  document.getElementById('statTotal').textContent = comprobantes.length;
+
+  const cargos = comprobantes.filter(c => c.tipo.includes('CARGO'));
+  const abonos = comprobantes.filter(c => c.tipo.includes('ABONO'));
+  document.getElementById('statTipos').textContent = `${cargos.length} cargos · ${abonos.length} abonos`;
+
+  const totalCargo = cargos.reduce((s, c) => s + c.monto, 0);
+  const totalAbono = abonos.reduce((s, c) => s + c.monto, 0);
+  document.getElementById('statMontoCargo').textContent = fmt(totalCargo);
+  document.getElementById('statMontoAbono').textContent = fmt(totalAbono);
+
+  const primera = comprobantes[0];
+  if (primera) {
+    const fechaPart = primera.fechaCreacion.split(',')[0];
+    document.getElementById('statFecha').textContent = fechaPart;
+  }
+
+  renderTable();
+}
+
+function renderTable() {
+  const q = searchEl.value.toLowerCase().trim();
+  const filtered = comprobantes.filter(c => {
+    if (activeFilter === 'cargo' && !c.tipo.includes('CARGO')) return false;
+    if (activeFilter === 'abono' && !c.tipo.includes('ABONO')) return false;
+    if (!q) return true;
+    return (c.titular + ' ' + c.descripcion + ' ' + c.referencia + ' ' + c.monto + ' ' + c.numero).toLowerCase().includes(q);
+  });
+
+  resultsMetaEl.textContent = `${filtered.length} comprobante${filtered.length !== 1 ? 's' : ''}`;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Sin resultados con ese filtro.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(c => {
+    const tipo = c.tipo.includes('CARGO') ? 'cargo' : 'abono';
+    const tipoLabel = c.tipo.includes('CARGO') ? 'Cargo' : 'Abono';
+    return `
+      <tr>
+        <td class="num">${c.numero}</td>
+        <td><span class="pill ${tipo}">${tipoLabel}</span></td>
+        <td>
+          <div class="titular">${escapeHtml(c.titular)}</div>
+          <div class="desc">${escapeHtml(c.descripcion)}</div>
+        </td>
+        <td class="num">${escapeHtml(c.referencia)}</td>
+        <td class="right amount">${fmt(c.monto)}</td>
+        <td class="right">
+          <button class="download" data-num="${c.numero}" title="Descargar comprobante ${c.numero}">
+            <svg fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+            </svg>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  tbody.querySelectorAll('.download').forEach(btn => {
+    btn.addEventListener('click', () => downloadOne(parseInt(btn.dataset.num, 10)));
+  });
+}
+
+async function downloadOne(numero) {
+  const c = comprobantes.find(x => x.numero === numero);
+  if (!c) return;
+
+  const bytes = await extractComprobante(c);
+  const filename = buildFilename(c);
+  downloadBlob(bytes, filename);
+}
+
+async function extractComprobante(c) {
+  const srcDoc = await PDFLib.PDFDocument.load(originalPdfBytes.slice(0));
+  const newDoc = await PDFLib.PDFDocument.create();
+  const [copied] = await newDoc.copyPages(srcDoc, [c.pageIndex]);
+
+  if (c.positionOnPage === 0) {
+    copied.setCropBox(0, 420, 595.28, 421.89);
+    copied.setMediaBox(0, 420, 595.28, 421.89);
+  } else {
+    copied.setCropBox(0, 0, 595.28, 480);
+    copied.setMediaBox(0, 0, 595.28, 480);
+  }
+
+  newDoc.addPage(copied);
+  return await newDoc.save();
+}
+
+btnDownloadAll.addEventListener('click', async () => {
+  btnDownloadAll.disabled = true;
+  const originalText = btnDownloadAll.innerHTML;
+  btnDownloadAll.textContent = 'Generando ZIP…';
+  try {
+    const zip = new JSZip();
+    for (const c of comprobantes) {
+      const bytes = await extractComprobante(c);
+      zip.file(buildFilename(c), bytes);
+    }
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const loteId = comprobantes.loteId || 'LOTE';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Comprobantes_${loteId}.zip`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (err) {
+    alert('Error al generar el ZIP: ' + err.message);
+  } finally {
+    btnDownloadAll.disabled = false;
+    btnDownloadAll.innerHTML = originalText;
+  }
+});
+
+function buildFilename(c) {
+  const tipo = c.tipo.includes('CARGO') ? 'CARGO' : 'ABONO';
+  const num = String(c.numero).padStart(2, '0');
+  const titular = c.titular.substring(0, 40).replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g, '').replace(/\s+/g, '_');
+  const monto = c.monto.toFixed(2);
+  return `${num}_${tipo}_${titular}_$${monto}.pdf`;
+}
+
+function downloadBlob(bytes, filename) {
+  const blob = new Blob([bytes], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function fmt(n) {
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[m]));
+}
+</script>
+</body>
+</html>
